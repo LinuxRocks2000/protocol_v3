@@ -2,6 +2,8 @@
 name = "protocol_v3"
 version = "0.1.0"
 edition = "2021"
+description = "MMOSG Protocol version 3 - an extensible websocket protocol for online games"
+license = "Unlicense"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
