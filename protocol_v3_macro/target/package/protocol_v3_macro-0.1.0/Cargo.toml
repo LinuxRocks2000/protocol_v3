@@ -13,6 +13,8 @@
 edition = "2021"
 name = "protocol_v3_macro"
 version = "0.1.0"
+description = "Derive macro for Protocol V3"
+license = "None"
 
 [lib]
 proc-macro = true
