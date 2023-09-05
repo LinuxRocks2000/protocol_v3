@@ -2,7 +2,7 @@
 name = "protocol_v3_macro"
 version = "0.1.0"
 edition = "2021"
-license = "None"
+license = "Unlicense"
 description = "Derive macro for Protocol V3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
