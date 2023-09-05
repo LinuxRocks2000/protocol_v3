@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "*", features = ["full"] }
-protocol_macro = { path = "protocol_macro", version = "0.1.0" }
-sha1_smol = { version = "*", features = ["std"] }
-base64 = "*"
-hex = "*"
+tokio = { version = "1.32.0", features = ["full"] }
+protocol_v3_macro = "0.1.0"
+sha1_smol = { version = "1.0.0", features = ["std"] }
+base64 = "0.21.3"
+hex = "0.4.3"

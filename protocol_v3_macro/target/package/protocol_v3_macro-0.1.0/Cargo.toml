@@ -20,10 +20,10 @@ license = "Unlicense"
 proc-macro = true
 
 [dependencies.proc-macro2]
-version = "*"
+version = "1.0.66"
 
 [dependencies.quote]
-version = "*"
+version = "1.0.33"
 
 [dependencies.syn]
 version = "2.0.29"
