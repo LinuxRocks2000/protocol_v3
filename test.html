@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Test Page for MMOSG Protocol V3</title>
+    </head>
+    <body>
+        <script src="protocol.js"></script>
+        <script>
+            protocol.connectV3(protocol.defaultConfig, prompt("ProtocolV3 Server")).then(connection => {
+                var world = connection.sendHandle("World");
+                connection.listen((operation, arguments) => {
+                    console.log("Got " + operation + " with " + arguments);
+                });
+                connection.onOpen(() => {
+                    world("tets", false, 67);
+                });
+            })
+        </script>
+    </body>
+</html>
