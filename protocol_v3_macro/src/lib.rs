@@ -30,7 +30,7 @@ pub fn protocol_frame_derive(input : TokenStream) -> TokenStream {
                     #name::#ident #thang => {
                         ret.push(#identi);
                         #(
-                            let mut x = protocol_encode(#argnames_tss.clone());
+                            let mut x = protocol_v3::protocol::protocol_encode(#argnames_tss.clone());
                             ret.append(&mut x);
                         )*
                         ret
@@ -49,7 +49,7 @@ pub fn protocol_frame_derive(input : TokenStream) -> TokenStream {
                     quote!{
                         (
                             #(
-                                protocol_decode::<#stuff>(&mut data)?,
+                                protocol_v3::protocol::protocol_decode::<#stuff>(&mut data)?,
                             )*
                         )
                     }
@@ -95,10 +95,6 @@ pub fn protocol_frame_derive(input : TokenStream) -> TokenStream {
             }
             manifest += "]}";
             quote! {
-                use protocol_v3::protocol::protocol_encode;
-                use protocol_v3::protocol::protocol_decode;
-                use protocol_v3::protocol::DecodeError;
-                use std::collections::VecDeque;
                 impl ProtocolFrame for #name {
                     fn encode(&self) -> Vec<u8> {
                         let mut ret : Vec<u8> = Vec::new();
@@ -108,13 +104,13 @@ pub fn protocol_frame_derive(input : TokenStream) -> TokenStream {
                             )*
                         }
                     }
-                    fn decode(mut data : VecDeque<u8>) -> Result<#name, DecodeError> {
+                    fn decode(mut data : std::collections::VecDeque<u8>) -> Result<#name, protocol_v3::protocol::DecodeError> {
                         match data.pop_front() {
                             #(
                                 #decoder
                             )*
                             _ => {
-                                Err(DecodeError{})
+                                Err(protocol_v3::protocol::DecodeError{})
                             }
                         }
                     }
