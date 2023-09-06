@@ -42,6 +42,7 @@ impl ProtocolSegment for u8 {
     }
 }
 
+
 impl ProtocolSegment for bool {
     fn encode(self) -> Vec<u8> {
         let mut v = Vec::with_capacity(1);
@@ -68,6 +69,44 @@ impl ProtocolSegment for u16 {
         Ok(Self::from_be_bytes(r))
     }
 }
+
+
+impl ProtocolSegment for u32 {
+    fn encode(self) -> Vec<u8> {
+        let mut v : Vec<u8> = Vec::with_capacity(4);
+        let bytes = self.to_be_bytes();
+        v.push(bytes[0]); // flip the byte order so it pops in properly
+        v.push(bytes[1]);
+        v.push(bytes[2]);
+        v.push(bytes[3]);
+        v
+    }
+
+    fn decode(data : &mut VecDeque<u8>) -> Result<Self, DecodeError> {
+        let r = [data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?];
+        Ok(Self::from_be_bytes(r))
+    }
+}
+
+
+impl ProtocolSegment for i32 {
+    fn encode(self) -> Vec<u8> {
+        let mut v : Vec<u8> = Vec::with_capacity(4);
+        let bytes = self.to_be_bytes();
+        v.push(bytes[0]); // flip the byte order so it pops in properly
+        v.push(bytes[1]);
+        v.push(bytes[2]);
+        v.push(bytes[3]);
+        v
+    }
+
+    fn decode(data : &mut VecDeque<u8>) -> Result<Self, DecodeError> {
+        let r = [data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?];
+        Ok(Self::from_be_bytes(r))
+    }
+}
+
+
 
 impl ProtocolSegment for f32 {
     fn encode(self) -> Vec<u8> {
