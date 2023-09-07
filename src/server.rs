@@ -105,16 +105,16 @@ impl IncomingWebSocketFrame {
 
 
 impl WebSocketClientStream {
-    pub async fn read<Protocol : ProtocolFrame>(&mut self) -> Result<Protocol, Box<dyn std::error::Error>> { // TODO: proper protocolling
+    pub async fn read<Protocol : ProtocolFrame>(&mut self) -> Option<Protocol> {
         let mut final_data : Vec<u8> = vec![];
         loop {
-            let mut frame = IncomingWebSocketFrame::read_in(&mut self.rx).await?; // TODO: sanely handle the error (especially if it's an overflow!) instead of just passing it up the chain.
+            let mut frame = IncomingWebSocketFrame::read_in(&mut self.rx).await.ok()?; // TODO: sanely handle the error (especially if it's an overflow!) instead of just passing it up the chain.
             final_data.append(&mut frame.message);
             if frame.fin {
                 break;
             }
         }
-        Ok(ProtocolFrame::decode(final_data.into())?)
+        Some(ProtocolFrame::decode(final_data.into()).ok()?)
     }
 
     pub async fn send<Protocol : ProtocolFrame>(&mut self, frame : Protocol) -> Result<(), Box<dyn std::error::Error>> {
@@ -138,7 +138,6 @@ impl WebSocketClientStream {
         }
         self.tx.write(headerbuf.as_slice()).await?;
         self.tx.write(data.as_slice()).await?;
-        println!("{:02X?}", headerbuf);
         Ok(())
     }
 }
@@ -157,7 +156,7 @@ fn count_up_till<T : PartialEq>(vec : &Vec<T>, thing : T) -> Option<usize> {
 
 
 impl WebSocketServer {
-    pub async fn new(port : u32, name : String) -> Self {
+    pub async fn new(port : u16, name : String) -> Self {
         Self {
             listener : TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap(),
             futures  : JoinSet::new(),
