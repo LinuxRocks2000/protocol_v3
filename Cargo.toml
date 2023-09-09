@@ -1,6 +1,6 @@
 [package]
 name = "protocol_v3"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "MMOSG Protocol version 3 - an extensible websocket protocol for online games"
 license = "Unlicense"
