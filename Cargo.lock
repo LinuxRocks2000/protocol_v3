@@ -190,7 +190,7 @@ dependencies = [
 
 [[package]]
 name = "protocol_v3"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64",
  "hex",
@@ -201,9 +201,9 @@ dependencies = [
 
 [[package]]
 name = "protocol_v3_macro"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dcdc38300f49528c7eced6ade3c682d6008d0a3f1af214c9fc8eb4c0afbabc1"
+checksum = "73a7e483c3a2fa887df73ad5e1ac316388f4696921bdcd8c7025c51100fe4d59"
 dependencies = [
  "proc-macro2",
  "quote",

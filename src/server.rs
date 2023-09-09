@@ -33,7 +33,8 @@ pub struct WebSocketServer {
 pub struct WebSocketClientStream {
     rx       : BufReader<OwnedReadHalf>,
     tx       : OwnedWriteHalf,
-    pub path : String
+    pub path : String,
+    closed   : bool
 }
 
 
@@ -55,9 +56,12 @@ impl std::fmt::Display for BadFrameError {
 }
 
 
-struct IncomingWebSocketFrame {
-    message : Vec<u8>,
-    fin     : bool
+enum IncomingWebSocketFrame {
+    DataFin (Vec<u8>),
+    DataUnfin (Vec<u8>),
+    Ping,
+    Pong,
+    Close
 }
 
 
@@ -66,12 +70,7 @@ impl IncomingWebSocketFrame {
         let mut headp1buf : [u8; 2] = [0; 2];
         let mut maskingkeybuf : [u8; 4] = [0; 4];
         rx.read_exact(&mut headp1buf).await?;
-        /*let opcode = headp1buf[0] & 0b00001111;
-        if opcode == 0x1 { // all data going through this channel must be binary so if it isn't 0x2 or 0x0 (continuation), it will error. Some sections of the binary data can and indeed must be utf-8 encoded, but they will be treated separately.
-            return Err(Box::new(BadFrameError{}));
-        }
-        RE-ENABLE this check when you have the protocol implementation stuff figgered!
-        */
+        let opcode = headp1buf[0] & 0b00001111;
         let fin = headp1buf[0] & 0b10000000 != 0; // continuation stuff
         if headp1buf[1] & 0b10000000 == 0 { // MASK == 0
             return Err(Box::new(BadFrameError{})); // short circuit: this frame is bad, and probably the client should be dropped.
@@ -96,25 +95,61 @@ impl IncomingWebSocketFrame {
         for i in 0..payloadbuf.len() {
             payloadbuf[i] = payloadbuf[i] ^ maskingkeybuf[i % 4];
         }
-        Ok(Self {
-            fin,
-            message : payloadbuf
-        })
+        if opcode == 0x9 {
+            Ok(Ping)
+        }
+        else if opcode == 0xA {
+            Ok(Pong)
+        }
+        else if opcode == 0x2 || opcode == 0x0 {
+            if fin {
+                Ok(DataFin (payloadbuf))
+            }
+            else {
+                Ok(DataUnfin (payloadbuf))
+            }
+        }
+        else if opcode == 0x8 {
+            Ok(Close)
+        }
+        else {
+            Err(Box::new(BadFrameError{})) // text ain't supported
+        }
     }
 }
+
+
+use IncomingWebSocketFrame::*;
 
 
 impl WebSocketClientStream {
     pub async fn read<Protocol : ProtocolFrame>(&mut self) -> Option<Protocol> {
         let mut final_data : Vec<u8> = vec![];
         loop {
-            let mut frame = IncomingWebSocketFrame::read_in(&mut self.rx).await.ok()?; // TODO: sanely handle the error (especially if it's an overflow!) instead of just passing it up the chain.
-            final_data.append(&mut frame.message);
-            if frame.fin {
-                break;
+            let frame = IncomingWebSocketFrame::read_in(&mut self.rx).await.ok()?; // if the reader hits unexpected EOF, this will return None.
+            match frame {
+                Ping => {}
+                Pong => {}
+                Close => {
+                    self.closed = true;
+                    self.send_close().await; // complying websocket clients will close the actual TCP stream after receiving our return close message, so this can be safely ignored - the connection will be dropped all right and proper soon.
+                }
+                DataFin (mut data) => {
+                    final_data.append(&mut data);
+                    break;
+                }
+                DataUnfin (mut data) => {
+                    final_data.append(&mut data);
+                }
             }
         }
-        Some(ProtocolFrame::decode(final_data.into()).ok()?)
+        match ProtocolFrame::decode(final_data.into()) {
+            Ok (result) => Some (result),
+            Err (_) => {
+                println!("Decode error! A client is poisoning!");
+                None
+            }
+        }
     }
 
     pub async fn send<Protocol : ProtocolFrame>(&mut self, frame : Protocol) -> Result<(), Box<dyn std::error::Error>> {
@@ -139,6 +174,29 @@ impl WebSocketClientStream {
         self.tx.write(headerbuf.as_slice()).await?;
         self.tx.write(data.as_slice()).await?;
         Ok(())
+    }
+
+    async fn send_close(&mut self) {
+        let _ = self.tx.write(&[0x8, 0x0]).await; // think about it - if it fails to send, that means the connection is already closed, so we should...
+        /****** do nothing ******/
+    }
+
+    pub async fn shutdown(&mut self) {
+        if !self.closed { // if it's already closed, do nothing.
+            self.send_close().await;
+            let _ = self.tx.shutdown().await;
+            for _ in 0..10 { // read out 10 frames MAX after sending close before leaving; this is just giving the client a chance to handle the close frame if other data is being sent.
+                match IncomingWebSocketFrame::read_in(&mut self.rx).await {
+                    Err(_) => {
+                        break; // the read failed: therefore, the connection must be closed, if not properly.
+                    }
+                    Ok(Close) => {
+                        break;
+                    }
+                    _ => {} // throw out
+                }
+            }
+        }
     }
 }
 
@@ -222,7 +280,7 @@ impl WebSocketServer {
         let shaun_bytes = hex::decode(shaun).unwrap();
         let b64sha1 = BASE64.encode(shaun_bytes);
         tx.try_write(format!("HTTP/1.1 101 Upgrading\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: {}\r\n\r\n", b64sha1).as_bytes()).unwrap();
-        Some(WebSocketClientStream { rx, tx, path : uri })
+        Some(WebSocketClientStream { rx, tx, path : uri, closed : false })
     }
 
     async fn handshake<InProtocol : ProtocolFrame, OutProtocol : ProtocolFrame>(name : String, socket : TcpStream) -> Option<WebSocketClientStream> {
@@ -263,7 +321,7 @@ impl WebSocketServer {
         } // case ambiguity for compatibility
 
         if uri == "/manifest" {
-            tx.try_write(format!("HTTP/1.1 200 Everything Is Ight, Cuh\r\nAccess-Control-Allow-Origin: *\r\n\r\n{{\"application_name\":\"{}\",\"incoming_protocol\":{},\"outgoing_protocol\":{}}}", name, InProtocol::manifest(), OutProtocol::manifest()).as_bytes()).unwrap();
+            tx.try_write(format!("HTTP/1.1 200 Everything Is Ight, Cuh\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{{\"application_name\":\"{}\",\"incoming_protocol\":{},\"outgoing_protocol\":{}}}", name, InProtocol::manifest(), OutProtocol::manifest()).as_bytes()).unwrap();
             println!("Client just wanted our manifest.");
             return None; // kill the connection, the client will have to reconnect to get the websocket upgrade. TODO: fix this!
         }

@@ -1,6 +1,6 @@
 [package]
 name = "protocol_v3"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "MMOSG Protocol version 3 - an extensible websocket protocol for online games"
 license = "Unlicense"
@@ -9,7 +9,7 @@ license = "Unlicense"
 
 [dependencies]
 tokio = { version = "1.32.0", features = ["full"] }
-protocol_v3_macro = "0.1.1"
+protocol_v3_macro = "0.1.2"
 sha1_smol = { version = "1.0.0", features = ["std"] }
 base64 = "0.21.3"
 hex = "0.4.3"
