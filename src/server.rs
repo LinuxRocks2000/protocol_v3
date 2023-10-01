@@ -284,7 +284,7 @@ impl WebSocketServer {
     }
 
     async fn handshake<InProtocol : ProtocolFrame, OutProtocol : ProtocolFrame>(name : String, socket : TcpStream) -> Option<WebSocketClientStream> {
-        //socket.set_nodelay(true).unwrap(); // this is meant for online games, like MMOSG. Nagle's algorithm will get in the way of proper performance. to compensate for the lack of Nagle, group together messages sanely.
+        socket.set_nodelay(true).unwrap(); // this is meant for online games, like MMOSG. Nagle's algorithm will get in the way of proper performance. to compensate for the lack of Nagle, group together messages sanely.
         let (rx, tx) = socket.into_split();
         let mut rxbuf = BufReader::new(rx);
         let mut method = Vec::<u8>::new();

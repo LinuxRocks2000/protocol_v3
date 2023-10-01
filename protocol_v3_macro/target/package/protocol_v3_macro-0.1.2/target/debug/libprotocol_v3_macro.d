@@ -1,0 +1,1 @@
+/home/awesome/protocol_v3/protocol_v3_macro/target/package/protocol_v3_macro-0.1.2/target/debug/libprotocol_v3_macro.so: /home/awesome/protocol_v3/protocol_v3_macro/target/package/protocol_v3_macro-0.1.2/src/lib.rs
