@@ -89,6 +89,28 @@ impl ProtocolSegment for u32 {
 }
 
 
+impl ProtocolSegment for u64 {
+    fn encode(self) -> Vec<u8> {
+        let mut v : Vec<u8> = Vec::with_capacity(8);
+        let bytes = self.to_be_bytes();
+        v.push(bytes[0]);
+        v.push(bytes[1]);
+        v.push(bytes[2]);
+        v.push(bytes[3]);
+        v.push(bytes[4]);
+        v.push(bytes[5]);
+        v.push(bytes[6]);
+        v.push(bytes[7]);
+        v
+    }
+
+    fn decode(data : &mut VecDeque<u8>) -> Result<Self, DecodeError> {
+        let r = [data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?, data.pop_front().ok_or(DecodeError {})?];
+        Ok(Self::from_be_bytes(r))
+    }
+}
+
+
 impl ProtocolSegment for i32 {
     fn encode(self) -> Vec<u8> {
         let mut v : Vec<u8> = Vec::with_capacity(4);
